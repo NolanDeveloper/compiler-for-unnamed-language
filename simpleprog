@@ -1,0 +1,36 @@
+int foo() {
+    return 11;
+}
+
+int main() {
+    int a = 42;
+    if (foo()) {
+        a = a + 2;
+        a = foo();
+    }
+    return a;
+}
+
+
+/* This code goes to:
+; ModuleID = 'seagull'
+
+define internal i32 @foo() {
+function_body:
+  ret i32 11
+}
+
+define internal i32 @main() {
+function_body:
+  %call = call i32 @foo()
+  %ifcond = fcmp one i32 %call, 0
+  br i32 %call, label %then, label %merge
+
+then:                                             ; preds = %function_body
+  %call1 = call i32 @foo()
+  br label %merge
+
+merge:                                            ; preds = %then, %function_body
+  ret i32 %call1
+}
+*/

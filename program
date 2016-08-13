@@ -1,0 +1,26 @@
+float foo(float x) {
+    return x;
+}
+
+int main() {
+    return int(foo(32.0 + 3.2) / 14.0) + int(3.14);
+}
+
+/* This code goes to:
+; ModuleID = 'seagull'
+
+define internal float @foo(float %x) {
+function_body:
+  ret float %x
+}
+
+define internal i32 @main() {
+function_body:
+  %call = call float @foo(float add (float 3.200000e+01, float 0x40099999A0000000))
+  %div = sdiv float %call, 1.400000e+01
+  %cast = fptosi float %div to i32
+  %add = add i32 %cast, 3
+  ret i32 %add
+}
+*/
+
