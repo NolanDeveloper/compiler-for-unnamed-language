@@ -106,7 +106,7 @@ void call_expression::accept(visitor & v) const { v.visit(*this); }
 void binary_expression::accept(visitor & v) const { v.visit(*this); }
 void cast_expression::accept(visitor & v) const { v.visit(*this); }
 
-variable_declaration_statement * sema::lookup_variable(const string & name) {
+variable_declaration_statement * context::lookup_variable(const string & name) {
     for (auto & scope : variables) {
         // Find variable declaration
         auto begin = scope.begin();
@@ -122,7 +122,7 @@ variable_declaration_statement * sema::lookup_variable(const string & name) {
     return nullptr;
 }
 
-ptr<expression> sema::create_default_value(type_node type) {
+ptr<expression> context::create_default_value(type_node type) {
     switch (type) {
     case type_node::INT:
         return make_unique<int_literal_expression>(0);
@@ -131,7 +131,7 @@ ptr<expression> sema::create_default_value(type_node type) {
     }
 }
 
-void sema::act_on_variable_declaration(ptr<statement> & stmt, type_node type,
+void context::act_on_variable_declaration(ptr<statement> & stmt, type_node type,
         string name, ptr<expression> initial_value) {
     auto begin = variables.back().begin();
     auto end = variables.back().end();
@@ -156,7 +156,7 @@ void sema::act_on_variable_declaration(ptr<statement> & stmt, type_node type,
     stmt = move(new_stmt);
 }
 
-void sema::act_on_functon_declaration(ptr<function_declaration> & func_decl,
+void context::act_on_functon_declaration(ptr<function_declaration> & func_decl,
         type_node return_type, string name, 
         vector<ptr<variable_declaration_statement>> parameters,
         ptr<statement> body) {
@@ -175,7 +175,7 @@ void sema::act_on_functon_declaration(ptr<function_declaration> & func_decl,
     functions.push_back(func_decl.get());
 }
 
-void sema::act_on_call_expression(ptr<expression> & expr, string name, 
+void context::act_on_call_expression(ptr<expression> & expr, string name, 
         vector<ptr<expression>> arguments) {
     // Find function declaration for this call
     auto begin = functions.begin();
@@ -199,7 +199,7 @@ void sema::act_on_call_expression(ptr<expression> & expr, string name,
     expr = make_unique<call_expression>(*it, move(arguments));
 }
 
-void sema::act_on_assignment_expression(ptr<expression> & expr, 
+void context::act_on_assignment_expression(ptr<expression> & expr, 
         string name, ptr<expression> value) {
     variable_declaration_statement * decl = lookup_variable(name);
     if (!decl) {
@@ -213,7 +213,7 @@ void sema::act_on_assignment_expression(ptr<expression> & expr,
     expr = make_unique<assignment_expression>(decl, move(value));
 }
 
-void sema::act_on_variable_expression(ptr<expression> & expr, string name) {
+void context::act_on_variable_expression(ptr<expression> & expr, string name) {
     variable_declaration_statement * decl = lookup_variable(name);
     if (!decl) {
         cout << "No variable with such name: " << name << '\n';
@@ -222,7 +222,7 @@ void sema::act_on_variable_expression(ptr<expression> & expr, string name) {
     expr = make_unique<variable_expression>(decl);
 }
 
-void sema::act_on_binary_expression(ptr<expression> & expr, 
+void context::act_on_binary_expression(ptr<expression> & expr, 
         opcode operation, ptr<expression> lhs, ptr<expression> rhs) {
     if (lhs->type != rhs->type) {
         cout << "Operands of binary expression have different type.\n";
@@ -231,11 +231,11 @@ void sema::act_on_binary_expression(ptr<expression> & expr,
     expr = make_unique<binary_expression>(operation, move(lhs), move(rhs));
 }
 
-void sema::enter_function_declaration(type_node return_type) {
+void context::enter_function_declaration(type_node return_type) {
     current_function_return_type = return_type;
 }
 
-void sema::act_on_return_statement(ptr<statement> & stmt, ptr<expression> value) {
+void context::act_on_return_statement(ptr<statement> & stmt, ptr<expression> value) {
     if (current_function_return_type != value->type) {
         cout << "Returning value has wrong type: " << str(value->type) << '\n';
         cout << "while expected: " << str(current_function_return_type) << '\n';
@@ -335,21 +335,21 @@ bool parser::parse_primary_expression(token_iterator & it, token_iterator end,
     if (parse_token<p_lparen>(it, end)) {
         vector<ptr<expression>> arguments;
         if (parse_token<p_rparen>(it, end)) {
-            parsing_context.act_on_call_expression(expr, move(name), move(arguments));
+            semantic_actions.act_on_call_expression(expr, move(name), move(arguments));
             return true;
         }
         if (!parse_expression_list(it, end, arguments)) return it = t, false; 
         if (!parse_token<p_rparen>(it, end)) return it = t, false;
-        parsing_context.act_on_call_expression(expr, move(name), move(arguments));
+        semantic_actions.act_on_call_expression(expr, move(name), move(arguments));
         return true;
     }
     if (parse_token<p_assign>(it, end)) {
         ptr<expression> value;
         if (!parse_additive_expression(it, end, value)) return it = t, false;
-        parsing_context.act_on_assignment_expression(
+        semantic_actions.act_on_assignment_expression(
                 expr, move(name), move(value));
     } else {
-        parsing_context.act_on_variable_expression(expr, move(name));
+        semantic_actions.act_on_variable_expression(expr, move(name));
     }
     return true;
 }
@@ -367,7 +367,7 @@ bool parser::parse_multiplicative_expression(token_iterator & it, token_iterator
     while (parse_multiplicative_op(it, end, operation)) {
         if (!parse_primary_expression(it, end, rhs)) 
             return it = t, false;
-        parsing_context.act_on_binary_expression(expr, operation, move(lhs), move(rhs));
+        semantic_actions.act_on_binary_expression(expr, operation, move(lhs), move(rhs));
         lhs = move(expr);
     }
     expr = move(lhs);
@@ -386,7 +386,7 @@ bool parser::parse_additive_expression(token_iterator & it, token_iterator end,
     while (parse_additive_op(it, end, operation)) {
         if (!parse_multiplicative_expression(it, end, rhs)) 
             return it = t, false;
-        parsing_context.act_on_binary_expression(expr, operation, move(lhs), move(rhs));
+        semantic_actions.act_on_binary_expression(expr, operation, move(lhs), move(rhs));
         lhs = move(expr);
     }
     expr = move(lhs);
@@ -456,7 +456,7 @@ bool parser::parse_return_statement(token_iterator & it, token_iterator end,
     if (!parse_token<kw_return>(it, end)) return false;
     if (!parse_additive_expression(it, end, return_value)) return it = t, false;
     if (!parse_token<p_semicolon>(it, end)) return it = t, false;
-    parsing_context.act_on_return_statement(stmt, move(return_value));
+    semantic_actions.act_on_return_statement(stmt, move(return_value));
     return true;
 }
 
@@ -473,7 +473,7 @@ bool parser::parse_variable_declaration(token_iterator & it, token_iterator end,
     if (parse_token<p_assign>(it, end))
         if (!parse_additive_expression(it, end, initialization)) return it = t, false;
     if (!parse_token<p_semicolon>(it, end)) return it = t, false;
-    parsing_context.act_on_variable_declaration(
+    semantic_actions.act_on_variable_declaration(
             stmt, type, move(name), move(initialization));
     return true;
 }
@@ -539,7 +539,7 @@ bool parser::parse_function_parameter(token_iterator & it, token_iterator end,
     if (!parse_name_id(it, end, name)) return it = t, false;
     // TODO: check name issues
     parameter = make_unique<variable_declaration_statement>(type, move(name), nullptr);
-    parsing_context.variables.back().push_back(parameter.get());
+    semantic_actions.variables.back().push_back(parameter.get());
     return true;
 }
 
@@ -549,7 +549,7 @@ bool parser::parse_parameter_list(token_iterator & it, token_iterator end,
         vector<ptr<variable_declaration_statement>> & parameters) {
     ptr<variable_declaration_statement> parameter;
     if (!parse_function_parameter(it, end, parameter)) return false;
-    // TODO: move checking code into parsing_context
+    // TODO: move checking code into semantic_actions
     bool previously_declared_name = find_if(
             parameters.begin(), parameters.end(),
             [&parameter] (const ptr<variable_declaration_statement> & p) {
@@ -580,16 +580,16 @@ bool parser::parse_function_declaration(token_iterator & it, token_iterator end,
     if (!parse_name_id(it, end, name)) return it = t, false;
     if (!parse_token<p_lparen>(it, end)) return it = t, false;
     if (!parse_token<p_rparen>(it, end)) {
-        parsing_context.push_context();
+        semantic_actions.push_context();
         if (!parse_parameter_list(it, end, parameters)) return it = t, false;
         if (!parse_token<p_rparen>(it, end)) return it = t, false;
     } else {
-        parsing_context.push_context();
+        semantic_actions.push_context();
     }
-    parsing_context.enter_function_declaration(return_type);
+    semantic_actions.enter_function_declaration(return_type);
     if (!parse_compound_statement(it, end, body)) return it = t, false;
-    parsing_context.pop_context();
-    parsing_context.act_on_functon_declaration(
+    semantic_actions.pop_context();
+    semantic_actions.act_on_functon_declaration(
             func_decl, return_type, move(name), move(parameters), move(body));
     return true;
 }

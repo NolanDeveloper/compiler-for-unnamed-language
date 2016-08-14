@@ -78,7 +78,7 @@ struct code_generator_visitor : visitor {
         llvm::FunctionType * function_type = 
             llvm::FunctionType::get(return_type, argument_types, /* is_vararg */ false);
         llvm::Function * function = llvm::Function::Create( 
-                function_type, llvm::Function::InternalLinkage, 
+                function_type, llvm::Function::ExternalLinkage,
                 node.name, module.get());
         functions[&node] = function;
         i = 0;

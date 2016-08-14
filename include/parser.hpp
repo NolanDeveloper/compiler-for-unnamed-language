@@ -8,8 +8,6 @@
 
 using token_iterator = std::vector<ptr<token>>::const_iterator;
 
-struct visitor;
-
 struct expression;
 struct unit;
 struct function_declaration;
@@ -28,6 +26,26 @@ struct int_literal_expression;
 struct call_expression;
 struct binary_expression;
 struct cast_expression;
+
+struct visitor {
+    virtual void visit(const unit & node) = 0;
+    virtual void visit(const function_declaration & node) = 0;
+    virtual void visit(const variable_declaration_statement & node) = 0;
+    virtual void visit(const expression_statement & node) = 0;
+    virtual void visit(const return_statement & node) = 0;
+    virtual void visit(const if_statement & node) = 0;
+    virtual void visit(const while_statement & node) = 0;
+    virtual void visit(const for_statement & node) = 0;
+    virtual void visit(const compound_statement & node) = 0;
+    virtual void visit(const variable_expression & node) = 0;
+    virtual void visit(const assignment_expression & node) = 0;
+    virtual void visit(const float_literal_expression & node) = 0;
+    virtual void visit(const int_literal_expression & node) = 0;
+    virtual void visit(const call_expression & node) = 0;
+    virtual void visit(const binary_expression & node) = 0;
+    virtual void visit(const cast_expression & node) = 0;
+    virtual ~visitor() { }
+};
 
 struct ast_node { 
     virtual ~ast_node() { };
@@ -165,32 +183,12 @@ struct unit : ast_node {
     void accept(visitor & v) const override;
 };
 
-struct visitor {
-    virtual void visit(const unit & node) = 0;
-    virtual void visit(const function_declaration & node) = 0;
-    virtual void visit(const variable_declaration_statement & node) = 0;
-    virtual void visit(const expression_statement & node) = 0;
-    virtual void visit(const return_statement & node) = 0;
-    virtual void visit(const if_statement & node) = 0;
-    virtual void visit(const while_statement & node) = 0;
-    virtual void visit(const for_statement & node) = 0;
-    virtual void visit(const compound_statement & node) = 0;
-    virtual void visit(const variable_expression & node) = 0;
-    virtual void visit(const assignment_expression & node) = 0;
-    virtual void visit(const float_literal_expression & node) = 0;
-    virtual void visit(const int_literal_expression & node) = 0;
-    virtual void visit(const call_expression & node) = 0;
-    virtual void visit(const binary_expression & node) = 0;
-    virtual void visit(const cast_expression & node) = 0;
-    virtual ~visitor() { }
-};
-
-struct sema {
+struct context {
     std::vector<std::vector<variable_declaration_statement *>> variables;
     std::vector<function_declaration *> functions;
     type_node current_function_return_type;
 
-    sema() { variables.emplace_back(); }
+    context() { variables.emplace_back(); }
 
     variable_declaration_statement * lookup_variable(const std::string & name);
 
@@ -225,7 +223,7 @@ struct sema {
 };
 
 struct parser {
-    sema parsing_context;
+    context semantic_actions;
 
     template <typename T>
     bool parse_token(token_iterator & it, token_iterator end) {
