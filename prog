@@ -1,0 +1,16 @@
+float fib(int n) {
+    float a = 1.;
+    float b = 1.;
+    float t;
+    int i;
+    for (i = 0; i - n; i = i + 1) {
+        t = a + b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+int main() {
+    return int(fib(10));
+}
