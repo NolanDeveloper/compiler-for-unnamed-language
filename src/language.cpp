@@ -13,9 +13,11 @@
 #include <cassert>
 #include <memory>
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <sstream>
 #include <map>
+#include <getopt.h>
 
 using namespace std;
 
@@ -251,17 +253,58 @@ struct code_generator_visitor : visitor {
     };
 };
 
-int main() {
+enum class output_type {
+    llvm_ir, ast
+};
+
+int main(int argc, char ** argv) {
+    static const option long_options[] = {
+        { "type", required_argument, nullptr, 't' },
+        { "file", required_argument, nullptr, 'f' },
+    };
+    output_type type = output_type::llvm_ir;
+    string filename;
+    while (char c = getopt_long(argc, argv, "t:f:", long_options, nullptr)) {
+        switch (c) {
+        case 't':
+            if (!strcmp(optarg, "llvm-ir")) {
+                type = output_type::llvm_ir;
+            } else if (!strcmp(optarg, "ast")) {
+                type = output_type::ast;
+            } else {
+                cout << "Provided wrong parameter for \"--type\" argument: " << optarg
+                     << "\nallowed:\n\tllvm-ir\n\tast\n";
+            }
+            break;
+        case 'f': filename = optarg; break;
+        case ':':
+            cout << "Option " << optopt << " requires operand.\n";
+            break;
+        case -1: goto break_inner;
+        default: return -1;
+        }
+    }
+break_inner:
     ostringstream oss;
-    oss << cin.rdbuf();
+    ifstream fs(filename);
+    oss << fs.rdbuf();
     vector<ptr<token>> tokens = tokenize(oss.str());
     ptr<unit> translation_unit;
     parser parser;
-    //cout << parser.parse(tokens.cbegin(), tokens.cend(), translation_unit) << '\n';
     parser.parse(tokens.cbegin(), tokens.cend(), translation_unit);
-    //printer prnt(cout);
-    //translation_unit->accept(prnt);
-    code_generator_visitor codegen(cout);
-    translation_unit->accept(codegen);
+    switch (type) {
+    case output_type::llvm_ir:
+        {
+            code_generator_visitor codegen(cout);
+            translation_unit->accept(codegen);
+        }
+        break;
+    case output_type::ast:
+        {
+            printer prnt(cout);
+            translation_unit->accept(prnt);
+        }
+        break;
+    }
     return 0;
 }
