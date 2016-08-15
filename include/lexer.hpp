@@ -6,45 +6,45 @@
 #include <vector>
 #include <memory>
 
-struct token { 
-    virtual ~token() { }
+struct Token { 
+    virtual ~Token() { }
 };
 
-struct end_of_file : token { };
-struct kw_int : token { };
-struct kw_float : token { };
-struct kw_for : token { };
-struct kw_while : token { };
-struct kw_if : token { };
-struct kw_return : token { };
-struct p_comma : token { };
-struct p_semicolon : token { };
-struct p_lparen : token { };
-struct p_rparen : token { };
-struct p_lbracket : token { };
-struct p_rbracket : token { };
-struct p_assign : token { };
-struct p_plus : token { };
-struct p_minus : token { };
-struct p_multiply : token { };
-struct p_divide : token { };
+struct End_of_file : Token { };
+struct Kw_int : Token { };
+struct Kw_float : Token { };
+struct Kw_for : Token { };
+struct Kw_while : Token { };
+struct Kw_if : Token { };
+struct Kw_return : Token { };
+struct P_comma : Token { };
+struct P_semicolon : Token { };
+struct P_lparen : Token { };
+struct P_rparen : Token { };
+struct P_lbracket : Token { };
+struct P_rbracket : Token { };
+struct P_assign : Token { };
+struct P_plus : Token { };
+struct P_minus : Token { };
+struct P_multiply : Token { };
+struct P_divide : Token { };
 
-struct token_with_text : token {
+struct Token_with_text : Token {
     const std::string text;
-    token_with_text(std::string text) : text(move(text)) { }
+    Token_with_text(std::string text) : text(move(text)) { }
 };
 
-struct name_id : token_with_text {
-    name_id(std::string text) : token_with_text(text) { }
+struct name_id : Token_with_text {
+    name_id(std::string text) : Token_with_text(text) { }
 };
 
-struct int_literal : token_with_text {
-    int_literal(std::string text) : token_with_text(text) { }
+struct int_literal : Token_with_text {
+    int_literal(std::string text) : Token_with_text(text) { }
 };
 
-struct float_literal : token_with_text {
-    float_literal(std::string text) : token_with_text(text) { }
+struct float_literal : Token_with_text {
+    float_literal(std::string text) : Token_with_text(text) { }
 };
 
 // Breaks text of program into tokens.
-std::vector<ptr<token>> tokenize(const std::string & text);
+std::vector<Ptr<Token>> tokenize(const std::string & text);

@@ -2,52 +2,52 @@
 
 using namespace std;
 
-vector<ptr<token>> tokenize(const string & text) {
+vector<Ptr<Token>> tokenize(const string & text) {
     string::const_iterator it = text.cbegin();
     string::const_iterator end = text.cend();
-    vector<ptr<token>> tokens;
+    vector<Ptr<Token>> tokens;
     tokens.reserve(text.size() / 2);
     while (true) {
         while (it != end && isspace(*it)) ++it;
         if (it == end) {
-            tokens.push_back(make_unique<end_of_file>());
+            tokens.push_back(make_unique<End_of_file>());
             break;
         }
         if (*it == ',') {
-            tokens.push_back(make_unique<p_comma>());
+            tokens.push_back(make_unique<P_comma>());
             ++it;
         } else if (*it == ';') {
-            tokens.push_back(make_unique<p_semicolon>());
+            tokens.push_back(make_unique<P_semicolon>());
             ++it;
         } else if (*it == '(') {
-            tokens.push_back(make_unique<p_lparen>());
+            tokens.push_back(make_unique<P_lparen>());
             ++it;
         } else if (*it == ')') {
-            tokens.push_back(make_unique<p_rparen>());
+            tokens.push_back(make_unique<P_rparen>());
             ++it;
         } else if (*it == '{') {
-            tokens.push_back(make_unique<p_lbracket>());
+            tokens.push_back(make_unique<P_lbracket>());
             ++it;
         } else if (*it == '}') {
-            tokens.push_back(make_unique<p_rbracket>());
+            tokens.push_back(make_unique<P_rbracket>());
             ++it;
         } else if (*it == '=') {
-            tokens.push_back(make_unique<p_assign>());
+            tokens.push_back(make_unique<P_assign>());
             ++it;
         } else if (*it == '+') {
-            tokens.push_back(make_unique<p_plus>());
+            tokens.push_back(make_unique<P_plus>());
             ++it;
         } else if (*it == '*') {
-            tokens.push_back(make_unique<p_multiply>());
+            tokens.push_back(make_unique<P_multiply>());
             ++it;
         } else if (*it == '/') {
-            tokens.push_back(make_unique<p_divide>());
+            tokens.push_back(make_unique<P_divide>());
             ++it;
-        } else if (*it == '-') { // p_minus, int_literal, float_literal
+        } else if (*it == '-') { // P_minus, int_literal, float_literal
             string str = "-";
             ++it;
             if (it == end || !isdigit(*it))
-                tokens.push_back(make_unique<p_minus>());
+                tokens.push_back(make_unique<P_minus>());
             else {
                 str += *it;
                 ++it;
@@ -98,17 +98,17 @@ vector<ptr<token>> tokenize(const string & text) {
                 ++it;
             }
             if (str == "int") {
-                tokens.push_back(make_unique<kw_int>());
+                tokens.push_back(make_unique<Kw_int>());
             } else if (str == "float") {
-                tokens.push_back(make_unique<kw_float>());
+                tokens.push_back(make_unique<Kw_float>());
             } else if (str == "for") {
-                tokens.push_back(make_unique<kw_for>());
+                tokens.push_back(make_unique<Kw_for>());
             } else if (str == "while") {
-                tokens.push_back(make_unique<kw_while>());
+                tokens.push_back(make_unique<Kw_while>());
             } else if (str == "if") {
-                tokens.push_back(make_unique<kw_if>());
+                tokens.push_back(make_unique<Kw_if>());
             } else if (str == "return") {
-                tokens.push_back(make_unique<kw_return>());
+                tokens.push_back(make_unique<Kw_return>());
             } else {
                 tokens.push_back(make_unique<name_id>(move(str)));
             }

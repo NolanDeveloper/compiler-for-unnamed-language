@@ -5,7 +5,7 @@
 #include <utility>
 
 template <typename T>
-using ptr = std::unique_ptr<T>;
+using Ptr = std::unique_ptr<T>;
 
 template <typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args &&... args) {

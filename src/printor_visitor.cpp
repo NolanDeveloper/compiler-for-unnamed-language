@@ -2,14 +2,14 @@
 
 using namespace std;
 
-void printer::println(const string & s) {
+void Printer::println(const string & s) {
     for (int i = 0; i < tabs; ++i)
         os << "  ";
     os << s << '\n';
 }
 
-void printer::visit(const unit & node) {
-    println("{ unit");
+void Printer::visit(const Unit & node) {
+    println("{ Unit");
     add_tab();
     println("function_declarations = [");
     add_tab();
@@ -25,8 +25,8 @@ void printer::visit(const unit & node) {
     println("}");
 }
 
-void printer::visit(const function_declaration & node) {
-    println("{ function_declaration");
+void Printer::visit(const Function_declaration & node) {
+    println("{ Function_declaration");
     add_tab();
     println("return_type = \""_s + str(node.return_type) + "\"");
     println("name = \""_s + node.name + "\"");
@@ -53,8 +53,8 @@ void printer::visit(const function_declaration & node) {
     println("}");
 }
 
-void printer::visit(const variable_declaration_statement & node) {
-    println("{ variable_declaration_statement");
+void Printer::visit(const Variable_declaration_statement & node) {
+    println("{ Variable_declaration_statement");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("name = \""_s + node.name + "\"");
@@ -69,8 +69,8 @@ void printer::visit(const variable_declaration_statement & node) {
     println("}");
 }
 
-void printer::visit(const expression_statement & node) {
-    println("{ expression_statement");
+void Printer::visit(const Expression_statement & node) {
+    println("{ Expression_statement");
     add_tab();
     println("expr =");
     add_tab();
@@ -80,8 +80,8 @@ void printer::visit(const expression_statement & node) {
     println("}");
 }
 
-void printer::visit(const return_statement & node) {
-    println("{ return_statement");
+void Printer::visit(const Return_statement & node) {
+    println("{ Return_statement");
     add_tab();
     println("value =");
     add_tab();
@@ -91,8 +91,8 @@ void printer::visit(const return_statement & node) {
     println("}");
 }
 
-void printer::visit(const if_statement & node) {
-    println("{ if_statement");
+void Printer::visit(const If_statement & node) {
+    println("{ If_statement");
     add_tab();
     println("condition =");
     add_tab();
@@ -106,8 +106,8 @@ void printer::visit(const if_statement & node) {
     println("}");
 }
 
-void printer::visit(const while_statement & node) {
-    println("{ while_statement");
+void Printer::visit(const While_statement & node) {
+    println("{ While_statement");
     add_tab();
     println("condition =");
     add_tab();
@@ -121,8 +121,8 @@ void printer::visit(const while_statement & node) {
     println("}");
 }
 
-void printer::visit(const for_statement & node) {
-    println("{ for_statement");
+void Printer::visit(const For_statement & node) {
+    println("{ For_statement");
     add_tab();
     println("initialization =");
     add_tab();
@@ -144,8 +144,8 @@ void printer::visit(const for_statement & node) {
     println("}");
 }
 
-void printer::visit(const compound_statement & node) {
-    println("{ compound_statement");
+void Printer::visit(const Compound_statement & node) {
+    println("{ Compound_statement");
     add_tab();
     println("statements = [");
     add_tab();
@@ -162,8 +162,8 @@ void printer::visit(const compound_statement & node) {
     println("}");
 }
 
-void printer::visit(const variable_expression & node) {
-    println("{ variable_expression");
+void Printer::visit(const Variable_expression & node) {
+    println("{ Variable_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("decl = ");
@@ -174,7 +174,7 @@ void printer::visit(const variable_expression & node) {
     println("}");
 }
 
-void printer::visit(const assignment_expression & node) {
+void Printer::visit(const Assignment_expression & node) {
     println("{ assignement_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
@@ -190,8 +190,8 @@ void printer::visit(const assignment_expression & node) {
     println("}");
 }
 
-void printer::visit(const float_literal_expression & node) {
-    println("{ float_literal_expression");
+void Printer::visit(const Float_literal_expression & node) {
+    println("{ Float_literal_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("value = \""_s + to_string(node.value) + "\"");
@@ -199,8 +199,8 @@ void printer::visit(const float_literal_expression & node) {
     println("}");
 }
 
-void printer::visit(const int_literal_expression & node) {
-    println("{ int_literal_expression");
+void Printer::visit(const Int_literal_expression & node) {
+    println("{ Int_literal_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("value = \""_s + to_string(node.value) + "\"");
@@ -208,8 +208,8 @@ void printer::visit(const int_literal_expression & node) {
     println("}");
 }
 
-void printer::visit(const call_expression & node) {
-    println("{ call_expression");
+void Printer::visit(const Call_expression & node) {
+    println("{ Call_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("decl = ");
@@ -231,8 +231,8 @@ void printer::visit(const call_expression & node) {
     println("}");
 }
 
-void printer::visit(const binary_expression & node) {
-    println("{ binary_expression");
+void Printer::visit(const Binary_expression & node) {
+    println("{ Binary_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("operation = \""_s + str(node.operation) + "\"");
@@ -248,8 +248,8 @@ void printer::visit(const binary_expression & node) {
     println("}");
 }
 
-void printer::visit(const cast_expression & node) {
-    println("{ cast_expression");
+void Printer::visit(const Cast_expression & node) {
+    println("{ Cast_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("expr =");

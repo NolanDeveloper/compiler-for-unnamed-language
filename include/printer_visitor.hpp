@@ -5,32 +5,32 @@
 #include <iostream>
 #include <string>
 
-class printer : public visitor {
+class Printer : public Visitor {
     std::ostream & os;
     int tabs = 0;
 
 public:
-    printer(std::ostream & os) : os(os) { }
+    Printer(std::ostream & os) : os(os) { }
 
     void add_tab() { ++tabs; }
     void delete_tab() { if (tabs != 0) --tabs; }
     void println(const std::string & s);
 
-    void visit(const unit & node) override;
-    void visit(const function_declaration & node) override;
-    void visit(const variable_declaration_statement & node) override;
-    void visit(const expression_statement & node) override;
-    void visit(const return_statement & node) override;
-    void visit(const if_statement & node) override;
-    void visit(const while_statement & node) override;
-    void visit(const for_statement & node) override;
-    void visit(const compound_statement & node) override;
-    void visit(const variable_expression & node) override;
-    void visit(const assignment_expression & node) override;
-    void visit(const float_literal_expression & node) override;
-    void visit(const int_literal_expression & node) override;
-    void visit(const call_expression & node) override;
-    void visit(const binary_expression & node) override;
-    void visit(const cast_expression & node) override;
+    void visit(const Unit & node) override;
+    void visit(const Function_declaration & node) override;
+    void visit(const Variable_declaration_statement & node) override;
+    void visit(const Expression_statement & node) override;
+    void visit(const Return_statement & node) override;
+    void visit(const If_statement & node) override;
+    void visit(const While_statement & node) override;
+    void visit(const For_statement & node) override;
+    void visit(const Compound_statement & node) override;
+    void visit(const Variable_expression & node) override;
+    void visit(const Assignment_expression & node) override;
+    void visit(const Float_literal_expression & node) override;
+    void visit(const Int_literal_expression & node) override;
+    void visit(const Call_expression & node) override;
+    void visit(const Binary_expression & node) override;
+    void visit(const Cast_expression & node) override;
 };
 

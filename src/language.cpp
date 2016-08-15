@@ -21,33 +21,33 @@
 
 using namespace std;
 
-struct code_generator_visitor : visitor {
+struct Code_generator_visitor : Visitor {
     ostream & os; // todo: remove
     llvm::LLVMContext & context = llvm::getGlobalContext();
     llvm::IRBuilder<> ir_builder = llvm::IRBuilder<>(llvm::getGlobalContext());
-    ptr<llvm::Module> module = 
+    Ptr<llvm::Module> module = 
         make_unique<llvm::Module>("seagull", llvm::getGlobalContext());
-    map<const ast_node *, llvm::Value *> values;
-    map<const function_declaration *, llvm::Function *> functions;
+    map<const Ast_node *, llvm::Value *> values;
+    map<const Function_declaration *, llvm::Function *> functions;
     llvm::Value * return_value;
 
-    code_generator_visitor(ostream & os) : os(os) { }
+    Code_generator_visitor(ostream & os) : os(os) { }
 
-    llvm::Type * get_llvm_type(type_node t) {
+    llvm::Type * get_llvm_type(Type_node t) {
         switch (t) {
-        case type_node::INT:
+        case Type_node::INT:
             return llvm::Type::getInt32Ty(llvm::getGlobalContext());
-        case type_node::FLOAT:
+        case Type_node::FLOAT:
             return llvm::Type::getFloatTy(llvm::getGlobalContext());
         }
     }
 
-    llvm::Value * get_default_constant(type_node t) {
+    llvm::Value * get_default_constant(Type_node t) {
         switch (t) {
-        case type_node::INT: 
+        case Type_node::INT: 
             return llvm::ConstantInt::get(
                     llvm::Type::getInt32Ty(llvm::getGlobalContext()), 0, true);
-        case type_node::FLOAT: 
+        case Type_node::FLOAT: 
             return llvm::ConstantFP::get(
                     llvm::Type::getFloatTy(llvm::getGlobalContext()), 0.f);
         }
@@ -64,14 +64,14 @@ struct code_generator_visitor : visitor {
         assert(false);
     }
 
-    void visit(const unit & node) override { 
+    void visit(const Unit & node) override { 
         for (const auto & declaration : node.function_declarations) {
             declaration->accept(*this);
         }
         module->dump();
     }
 
-    void visit(const function_declaration & node) override { 
+    void visit(const Function_declaration & node) override { 
         llvm::Type * return_type = get_llvm_type(node.return_type);
         vector<llvm::Type *> argument_types(node.parameters.size());
         int i = 0;
@@ -96,23 +96,23 @@ struct code_generator_visitor : visitor {
         llvm::verifyFunction(*function);
     }
 
-    void visit(const variable_declaration_statement & node) override { 
+    void visit(const Variable_declaration_statement & node) override { 
         llvm::Value * variable_ptr = ir_builder.CreateAlloca(get_llvm_type(node.type));
         node.initialization->accept(*this);
         ir_builder.CreateStore(return_value, variable_ptr);
         values[&node] = variable_ptr;
     }
 
-    void visit(const expression_statement & node) override { 
+    void visit(const Expression_statement & node) override { 
         node.expr->accept(*this);
     }
 
-    void visit(const return_statement & node) override { 
+    void visit(const Return_statement & node) override { 
         node.value->accept(*this);
         ir_builder.CreateRet(return_value);
     }
 
-    void visit(const if_statement & node) override {
+    void visit(const If_statement & node) override {
         node.condition->accept(*this);
         llvm::Value * condition = isZero(return_value);
         llvm::Function * current_function = ir_builder.GetInsertBlock()->getParent();
@@ -127,7 +127,7 @@ struct code_generator_visitor : visitor {
         ir_builder.SetInsertPoint(merge);
     }
 
-    void visit(const while_statement & node) override { 
+    void visit(const While_statement & node) override { 
         node.condition->accept(*this);
         llvm::Value * condition = isZero(return_value);
         llvm::Function * current_function = ir_builder.GetInsertBlock()->getParent();
@@ -145,7 +145,7 @@ struct code_generator_visitor : visitor {
         ir_builder.SetInsertPoint(_else);
     } 
 
-    void visit(const for_statement & node) override { 
+    void visit(const For_statement & node) override { 
         node.initialization->accept(*this);
         llvm::Value * initialization = return_value;
         llvm::Function * current_function = ir_builder.GetInsertBlock()->getParent();
@@ -167,35 +167,35 @@ struct code_generator_visitor : visitor {
         ir_builder.SetInsertPoint(_else);
     }
 
-    void visit(const compound_statement & node) override { 
+    void visit(const Compound_statement & node) override { 
         for (const auto & stmt : node.statements)
             stmt->accept(*this);
     }
 
-    void visit(const variable_expression & node) override {
+    void visit(const Variable_expression & node) override {
         return_value = ir_builder.CreateLoad(values[node.decl]);
     }
 
-    void visit(const assignment_expression & node) override { 
+    void visit(const Assignment_expression & node) override { 
         node.value->accept(*this);
         llvm::Value * value = ir_builder.CreateStore(return_value, values[node.decl]);
     }
 
-    void visit(const float_literal_expression & node) override { 
+    void visit(const Float_literal_expression & node) override { 
         llvm::Value * value = llvm::ConstantFP::get(
             llvm::Type::getFloatTy(llvm::getGlobalContext()),
             node.value);
         return_value = value;
     }
 
-    void visit(const int_literal_expression & node) override {
+    void visit(const Int_literal_expression & node) override {
         llvm::Value * value = llvm::ConstantInt::get(
             llvm::Type::getInt32Ty(llvm::getGlobalContext()),
             node.value, true);
         return_value = value;
     }
 
-    void visit(const call_expression & node) override { 
+    void visit(const Call_expression & node) override { 
         llvm::Function * function = functions[node.decl];       
         vector<llvm::Value *> arguments;
         arguments.reserve(node.decl->parameters.size());
@@ -209,43 +209,43 @@ struct code_generator_visitor : visitor {
         return_value = call;
     }
 
-    void visit(const binary_expression & node) override { 
+    void visit(const Binary_expression & node) override { 
         node.lhs->accept(*this);
         llvm::Value * lhs = return_value;
         node.rhs->accept(*this);
         llvm::Value * rhs = return_value;
         llvm::Value * operation;
         switch (node.type) {
-        case type_node::INT:
+        case Type_node::INT:
             switch (node.operation) {
-            case opcode::PLUS:     operation = ir_builder.CreateAdd(lhs, rhs, "add"); break;
-            case opcode::MINUS:    operation = ir_builder.CreateSub(lhs, rhs, "sub"); break;
-            case opcode::MULTIPLY: operation = ir_builder.CreateMul(lhs, rhs, "mul"); break;
-            case opcode::DIVIDE:   operation = ir_builder.CreateSDiv(lhs, rhs, "div"); break;
+            case Opcode::PLUS:     operation = ir_builder.CreateAdd(lhs, rhs, "add"); break;
+            case Opcode::MINUS:    operation = ir_builder.CreateSub(lhs, rhs, "sub"); break;
+            case Opcode::MULTIPLY: operation = ir_builder.CreateMul(lhs, rhs, "mul"); break;
+            case Opcode::DIVIDE:   operation = ir_builder.CreateSDiv(lhs, rhs, "div"); break;
             }
             break;
-        case type_node::FLOAT:
+        case Type_node::FLOAT:
             switch (node.operation) {
-            case opcode::PLUS:     operation = ir_builder.CreateFAdd(lhs, rhs, "add"); break;
-            case opcode::MINUS:    operation = ir_builder.CreateFSub(lhs, rhs, "sub"); break;
-            case opcode::MULTIPLY: operation = ir_builder.CreateFMul(lhs, rhs, "mul"); break;
-            case opcode::DIVIDE:   operation = ir_builder.CreateFDiv(lhs, rhs, "div"); break;
+            case Opcode::PLUS:     operation = ir_builder.CreateFAdd(lhs, rhs, "add"); break;
+            case Opcode::MINUS:    operation = ir_builder.CreateFSub(lhs, rhs, "sub"); break;
+            case Opcode::MULTIPLY: operation = ir_builder.CreateFMul(lhs, rhs, "mul"); break;
+            case Opcode::DIVIDE:   operation = ir_builder.CreateFDiv(lhs, rhs, "div"); break;
             }
             break;
         }
         return_value = operation;
     }
 
-    void visit(const cast_expression & node) override { 
+    void visit(const Cast_expression & node) override { 
         node.expr->accept(*this);
         llvm::Type * dest_type = get_llvm_type(node.type);
         llvm::Value * value = return_value;
         llvm::Value * cast;
         switch (node.type) {
-        case type_node::INT:
+        case Type_node::INT:
             cast = ir_builder.CreateFPToSI(value, dest_type, "cast");
             break;
-        case type_node::FLOAT:
+        case Type_node::FLOAT:
             cast = ir_builder.CreateSIToFP(value, dest_type, "cast");
             break;
         }
@@ -253,7 +253,7 @@ struct code_generator_visitor : visitor {
     };
 };
 
-enum class output_type {
+enum class Output_type {
     llvm_ir, ast
 };
 
@@ -262,15 +262,15 @@ int main(int argc, char ** argv) {
         { "type", required_argument, nullptr, 't' },
         { "file", required_argument, nullptr, 'f' },
     };
-    output_type type = output_type::llvm_ir;
+    Output_type type = Output_type::llvm_ir;
     string filename;
     while (char c = getopt_long(argc, argv, "t:f:", long_options, nullptr)) {
         switch (c) {
         case 't':
             if (!strcmp(optarg, "llvm-ir")) {
-                type = output_type::llvm_ir;
+                type = Output_type::llvm_ir;
             } else if (!strcmp(optarg, "ast")) {
-                type = output_type::ast;
+                type = Output_type::ast;
             } else {
                 cout << "Provided wrong parameter for \"--type\" argument: " << optarg
                      << "\nallowed:\n\tllvm-ir\n\tast\n";
@@ -288,20 +288,20 @@ break_inner:
     ostringstream oss;
     ifstream fs(filename);
     oss << fs.rdbuf();
-    vector<ptr<token>> tokens = tokenize(oss.str());
-    ptr<unit> translation_unit;
+    vector<Ptr<Token>> tokens = tokenize(oss.str());
+    Ptr<Unit> translation_unit;
     parser parser;
     parser.parse(tokens.cbegin(), tokens.cend(), translation_unit);
     switch (type) {
-    case output_type::llvm_ir:
+    case Output_type::llvm_ir:
         {
-            code_generator_visitor codegen(cout);
+            Code_generator_visitor codegen(cout);
             translation_unit->accept(codegen);
         }
         break;
-    case output_type::ast:
+    case Output_type::ast:
         {
-            printer prnt(cout);
+            Printer prnt(cout);
             translation_unit->accept(prnt);
         }
         break;
