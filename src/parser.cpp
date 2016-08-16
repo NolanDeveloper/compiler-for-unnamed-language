@@ -40,6 +40,11 @@ Call_expression::Call_expression(Function_declaration * decl,
         , decl(decl)
         , arguments(move(arguments)) { }
 
+Recursive_call_expression::Recursive_call_expression(Type_node current_function_return_type, 
+        vector<Ptr<Expression>> arguments)
+        : Expression(current_function_return_type)
+        , arguments(move(arguments)) { }
+
 Int_literal_expression::Int_literal_expression(int value) 
         : Expression(Type_node::INT), value(value) { }
 
@@ -103,10 +108,11 @@ void Assignment_expression::accept(Visitor & v) const { v.visit(*this); }
 void Float_literal_expression::accept(Visitor & v) const { v.visit(*this); }
 void Int_literal_expression::accept(Visitor & v) const { v.visit(*this); }
 void Call_expression::accept(Visitor & v) const { v.visit(*this); }
+void Recursive_call_expression::accept(Visitor & v) const { v.visit(*this); }
 void Binary_expression::accept(Visitor & v) const { v.visit(*this); }
 void Cast_expression::accept(Visitor & v) const { v.visit(*this); }
 
-Variable_declaration_statement * context::lookup_variable(const string & name) {
+Variable_declaration_statement * Context::lookup_variable(const string & name) {
     for (auto & scope : variables) {
         // Find variable declaration
         auto begin = scope.begin();
@@ -122,7 +128,7 @@ Variable_declaration_statement * context::lookup_variable(const string & name) {
     return nullptr;
 }
 
-Ptr<Expression> context::create_default_value(Type_node type) {
+Ptr<Expression> Context::create_default_value(Type_node type) {
     switch (type) {
     case Type_node::INT:
         return make_unique<Int_literal_expression>(0);
@@ -131,7 +137,7 @@ Ptr<Expression> context::create_default_value(Type_node type) {
     }
 }
 
-void context::act_on_variable_declaration(Ptr<Statement> & stmt, Type_node type,
+void Context::act_on_variable_declaration(Ptr<Statement> & stmt, Type_node type,
         string name, Ptr<Expression> initial_value) {
     auto begin = variables.back().begin();
     auto end = variables.back().end();
@@ -156,50 +162,87 @@ void context::act_on_variable_declaration(Ptr<Statement> & stmt, Type_node type,
     stmt = move(new_stmt);
 }
 
-void context::act_on_functon_declaration(Ptr<Function_declaration> & func_decl,
-        Type_node return_type, string name, 
-        vector<Ptr<Variable_declaration_statement>> parameters,
+void Context::act_before_function_body(Type_node return_type, string name, 
+            vector<Ptr<Variable_declaration_statement>> parameters) {
+    current_function_return_type = return_type;
+    current_function_name = move(name);
+    current_function_parameters = move(parameters);
+}
+
+void Context::act_on_functon_declaration(Ptr<Function_declaration> & func_decl,
         Ptr<Statement> body) {
     auto begin = functions.begin();
     auto end = functions.end();
     bool duplicate_name = find_if(begin, end,
-            [&name] (Function_declaration * decl) {
-                return name == decl->name;
+            [this] (Function_declaration * decl) {
+                return current_function_name == decl->name;
             }) != end;
     if (duplicate_name) {
-        cout << "Function has duplicate name: " << name << '\n';
+        cout << "Function has duplicate name: " << current_function_name << '\n';
         exit(-1);
     }
     func_decl = make_unique<Function_declaration>(
-            return_type, move(name), move(parameters), move(body));
+            current_function_return_type, move(current_function_name), 
+            move(current_function_parameters), move(body));
     functions.push_back(func_decl.get());
 }
 
-void context::act_on_call_expression(Ptr<Expression> & expr, string name, 
+void Context::act_on_call_expression(Ptr<Expression> & expr, string name, 
         vector<Ptr<Expression>> arguments) {
-    // Find function declaration for this call
-    auto begin = functions.begin();
-    auto end = functions.end();
-    auto it = find_if(begin, end,
-            [&name] (Function_declaration * decl) {
-                return name == decl->name;
-            });
-    if (it == end) {
-        cout << "No function with such name: " << name << '\n';
-        exit(-1);
+    if (current_function_name != name) { // not recursive call
+        // Find function declaration for this call
+        auto begin = functions.begin();
+        auto end = functions.end();
+        auto it = find_if(begin, end,
+                [&name] (Function_declaration * decl) {
+                    return name == decl->name;
+                });
+        if (it == end) {
+            cout << "No function with such name: " << name << '\n';
+            exit(-1);
+        }
+        // Check amount of arguments is correct
+        auto presented = arguments.size();
+        auto required = (**it).parameters.size();
+        if (presented != required) {
+            cout << "Wrong amount of arguments for call of function: " << name << '\n';
+            cout << required << " required, but " << presented << " presented.\n";
+            exit(-1);
+        }
+        // Check types of arguments
+        for (size_t i = 0; i < presented; ++i) {
+            if ((**it).parameters[i]->type != arguments[i]->type) {
+                cout << "Wrong type of argument " << i << " in call of function "
+                     << name << ". " << str((**it).parameters[i]->type) 
+                     << " was expected, but " << str(arguments[i]->type) << " occured.\n";
+                exit(-1);
+            }
+        }
+        expr = make_unique<Call_expression>(*it, move(arguments));
+    } else { // recursive call
+        // Check amount of arguments is correct
+        auto presented = arguments.size();
+        auto required = current_function_parameters.size();
+        if (presented != required) {
+            cout << "Wrong amount of arguments for call of function: " << name << '\n';
+            cout << required << " required, but " << presented << " presented.\n";
+            exit(-1);
+        }
+        // Check types of arguments
+        for (size_t i = 0; i < presented; ++i) {
+            if (current_function_parameters[i]->type != arguments[i]->type) {
+                cout << "Wrong type of argument " << i << " in call of function "
+                     << name << ". " << str(current_function_parameters[i]->type) 
+                     << " was expected, but " << str(arguments[i]->type) << " occured.\n";
+                exit(-1);
+            }
+        }
+        expr = make_unique<Recursive_call_expression>(
+                current_function_return_type, move(arguments));
     }
-    // Check amount of arguments is correct
-    auto presented = arguments.size();
-    auto required = (**it).parameters.size();
-    if (presented != required) {
-        cout << "Wrong amount of arguments for call of function: " << name << '\n';
-        cout << required << " required, but " << presented << " presented.\n";
-        exit(-1);
-    }
-    expr = make_unique<Call_expression>(*it, move(arguments));
 }
 
-void context::act_on_assignment_expression(Ptr<Expression> & expr, 
+void Context::act_on_assignment_expression(Ptr<Expression> & expr, 
         string name, Ptr<Expression> value) {
     Variable_declaration_statement * decl = lookup_variable(name);
     if (!decl) {
@@ -213,7 +256,7 @@ void context::act_on_assignment_expression(Ptr<Expression> & expr,
     expr = make_unique<Assignment_expression>(decl, move(value));
 }
 
-void context::act_on_variable_expression(Ptr<Expression> & expr, string name) {
+void Context::act_on_variable_expression(Ptr<Expression> & expr, string name) {
     Variable_declaration_statement * decl = lookup_variable(name);
     if (!decl) {
         cout << "No variable with such name: " << name << '\n';
@@ -222,7 +265,7 @@ void context::act_on_variable_expression(Ptr<Expression> & expr, string name) {
     expr = make_unique<Variable_expression>(decl);
 }
 
-void context::act_on_binary_expression(Ptr<Expression> & expr, 
+void Context::act_on_binary_expression(Ptr<Expression> & expr, 
         Opcode operation, Ptr<Expression> lhs, Ptr<Expression> rhs) {
     if (lhs->type != rhs->type) {
         cout << "Operands of binary Expression have different type.\n";
@@ -231,11 +274,7 @@ void context::act_on_binary_expression(Ptr<Expression> & expr,
     expr = make_unique<Binary_expression>(operation, move(lhs), move(rhs));
 }
 
-void context::enter_function_declaration(Type_node return_type) {
-    current_function_return_type = return_type;
-}
-
-void context::act_on_return_statement(Ptr<Statement> & stmt, Ptr<Expression> value) {
+void Context::act_on_return_statement(Ptr<Statement> & stmt, Ptr<Expression> value) {
     if (current_function_return_type != value->type) {
         cout << "Returning value has wrong type: " << str(value->type) << '\n';
         cout << "while expected: " << str(current_function_return_type) << '\n';
@@ -586,11 +625,10 @@ bool parser::parse_function_declaration(Token_iterator & it, Token_iterator end,
     } else {
         semantic_actions.push_context();
     }
-    semantic_actions.enter_function_declaration(return_type);
+    semantic_actions.act_before_function_body(return_type, move(name), move(parameters));
     if (!parse_compound_statement(it, end, body)) return it = t, false;
     semantic_actions.pop_context();
-    semantic_actions.act_on_functon_declaration(
-            func_decl, return_type, move(name), move(parameters), move(body));
+    semantic_actions.act_on_functon_declaration(func_decl, move(body));
     return true;
 }
 

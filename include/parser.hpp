@@ -24,6 +24,7 @@ struct Assignment_expression;
 struct Float_literal_expression;
 struct Int_literal_expression;
 struct Call_expression;
+struct Recursive_call_expression;
 struct Binary_expression;
 struct Cast_expression;
 
@@ -42,6 +43,7 @@ struct Visitor {
     virtual void visit(const Float_literal_expression & node) = 0;
     virtual void visit(const Int_literal_expression & node) = 0;
     virtual void visit(const Call_expression & node) = 0;
+    virtual void visit(const Recursive_call_expression & node) = 0;
     virtual void visit(const Binary_expression & node) = 0;
     virtual void visit(const Cast_expression & node) = 0;
     virtual ~Visitor() { }
@@ -85,6 +87,13 @@ struct Call_expression : Expression {
     const Function_declaration * decl;
     const std::vector<Ptr<Expression>> arguments;
     Call_expression(Function_declaration * decl, std::vector<Ptr<Expression>> arguments);
+    void accept(Visitor & v) const override;
+};
+
+struct Recursive_call_expression : Expression { 
+    const std::vector<Ptr<Expression>> arguments;
+    Recursive_call_expression(Type_node current_function_return_type, 
+        std::vector<Ptr<Expression>> arguments);
     void accept(Visitor & v) const override;
 };
 
@@ -170,7 +179,7 @@ struct Function_declaration : Ast_node {
     const Type_node return_type;
     const std::string name;
     const std::vector<Ptr<Variable_declaration_statement>> parameters;
-    Ptr<Statement> body;
+    const Ptr<Statement> body;
     Function_declaration(Type_node return_type, std::string name,
             std::vector<Ptr<Variable_declaration_statement>> parameters, 
             Ptr<Statement> body);
@@ -183,28 +192,29 @@ struct Unit : Ast_node {
     void accept(Visitor & v) const override;
 };
 
-struct context {
+struct Context {
     std::vector<std::vector<Variable_declaration_statement *>> variables;
     std::vector<Function_declaration *> functions;
     Type_node current_function_return_type;
+    std::string current_function_name;
+    std::vector<Ptr<Variable_declaration_statement>> current_function_parameters;
 
-    context() { variables.emplace_back(); }
+    Context() { variables.emplace_back(); }
 
     Variable_declaration_statement * lookup_variable(const std::string & name);
 
     void push_context() { variables.emplace_back(); }
     void pop_context() { variables.pop_back(); }
 
-    void enter_function_declaration(Type_node return_type);
-
     Ptr<Expression> create_default_value(Type_node type);
 
     void act_on_variable_declaration(Ptr<Statement> & stmt, Type_node type,
             std::string name, Ptr<Expression> initial_value);
 
+    void act_before_function_body(Type_node return_type, std::string name, 
+            std::vector<Ptr<Variable_declaration_statement>> parameters);
+
     void act_on_functon_declaration(Ptr<Function_declaration> & func_decl,
-            Type_node return_type, std::string name, 
-            std::vector<Ptr<Variable_declaration_statement>> parameters,
             Ptr<Statement> body);
 
     void act_on_call_expression(Ptr<Expression> & expr, std::string name, 
@@ -223,7 +233,7 @@ struct context {
 };
 
 struct parser {
-    context semantic_actions;
+    Context semantic_actions;
 
     template <typename T>
     bool parse_token(Token_iterator & it, Token_iterator end) {

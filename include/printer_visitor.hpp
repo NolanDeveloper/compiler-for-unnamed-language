@@ -30,6 +30,7 @@ public:
     void visit(const Float_literal_expression & node) override;
     void visit(const Int_literal_expression & node) override;
     void visit(const Call_expression & node) override;
+    void visit(const Recursive_call_expression & node) override;
     void visit(const Binary_expression & node) override;
     void visit(const Cast_expression & node) override;
 };

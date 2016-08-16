@@ -31,6 +31,7 @@ struct Code_generator_visitor : Visitor {
     map<const Ast_node *, Value *> values;
     map<const Function_declaration *, Function *> functions;
     Value * return_value;
+    const Function_declaration * current_function;
 
     Code_generator_visitor(ostream & os) : os(os) { }
 
@@ -73,6 +74,7 @@ struct Code_generator_visitor : Visitor {
     }
 
     void visit(const Function_declaration & node) override { 
+        current_function = &node;
         Type * return_type = get_llvm_type(node.return_type);
         vector<Type *> argument_types(node.parameters.size());
         int i = 0;
@@ -91,7 +93,7 @@ struct Code_generator_visitor : Visitor {
             ++i;
         }
         BasicBlock * function_body = 
-            BasicBlock::Create(getGlobalContext(), "function_body", function);
+            BasicBlock::Create(getGlobalContext(), "", function);
         ir_builder.SetInsertPoint(function_body);
         node.body->accept(*this);
         verifyFunction(*function);
@@ -206,8 +208,19 @@ struct Code_generator_visitor : Visitor {
             var->accept(*this);
             ir_builder.CreateStore(return_value, mem);
         }
-        Value * call = ir_builder.CreateCall(function, arguments, "call");
-        return_value = call;
+        return_value = ir_builder.CreateCall(function, arguments, "call");
+    }
+
+    void visit(const Recursive_call_expression & node) override {
+        vector<Value *> arguments;
+        arguments.reserve(current_function->parameters.size());
+        for (const auto & var : node.arguments) {
+            Value * mem = ir_builder.CreateAlloca(get_llvm_type(var->type));
+            arguments.push_back(mem);
+            var->accept(*this);
+            ir_builder.CreateStore(return_value, mem);
+        }
+        return_value = ir_builder.CreateCall(functions[current_function], arguments, "call");
     }
 
     void visit(const Binary_expression & node) override { 
@@ -275,12 +288,13 @@ int main(int argc, char ** argv) {
             } else {
                 cout << "Provided wrong parameter for \"--type\" argument: " << optarg
                      << "\nallowed:\n\tllvm-ir\n\tast\n";
+                return -1;
             }
             break;
         case 'f': filename = optarg; break;
         case ':':
             cout << "Option " << optopt << " requires operand.\n";
-            break;
+            return -1;
         case -1: goto break_inner;
         default: return -1;
         }

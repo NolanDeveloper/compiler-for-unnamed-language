@@ -166,16 +166,13 @@ void Printer::visit(const Variable_expression & node) {
     println("{ Variable_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
-    println("decl = ");
-    add_tab();
-    node.decl->accept(*this);
-    delete_tab();
+    println("name = \""_s + node.decl->name + "\"");
     delete_tab();
     println("}");
 }
 
 void Printer::visit(const Assignment_expression & node) {
-    println("{ assignement_expression");
+    println("{ Assigment_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
     println("decl = ");
@@ -212,10 +209,26 @@ void Printer::visit(const Call_expression & node) {
     println("{ Call_expression");
     add_tab();
     println("type = \""_s + str(node.type) + "\"");
-    println("decl = ");
+    println("name = \""_s + node.decl->name + "\"");
+    println("arguments = [");
     add_tab();
-    node.decl->accept(*this);
+    if (node.arguments.empty())
+        println("<none>");
+    else {
+        for (size_t i = 0; i < node.arguments.size(); ++i) {
+            node.arguments[i]->accept(*this);
+        }
+    }
     delete_tab();
+    println("]");
+    delete_tab();
+    println("}");
+}
+
+void Printer::visit(const Recursive_call_expression & node) {
+    println("{ Recursive_call_expression");
+    add_tab();
+    println("type = \""_s + str(node.type) + "\"");
     println("arguments = [");
     add_tab();
     if (node.arguments.empty())

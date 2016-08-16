@@ -5,7 +5,6 @@ CXX = clang++
 CXXFLAGS = -std=c++11 -g -Iinclude -ferror-limit=2
 LDLIBS = 
 
-
 LLVM_CONFIG_COMPILE := $$(/usr/lib/llvm-3.7/bin/llvm-config --cxxflags)
 LLVM_CONFIG_LINK := $$(/usr/lib/llvm-3.7/bin/llvm-config --cxxflags --ldflags --system-libs --libs core)
 
